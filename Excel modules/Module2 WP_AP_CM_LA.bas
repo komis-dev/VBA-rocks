@@ -10,7 +10,7 @@ Sub Process_MO_Workplan()
 
     With rangeval1.Validation
         .Delete
-        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:=xlEqual, Formula1:="AF,AS,CS,ET,FT,GP,JL,LD,MK,NR,TE,IP"
+        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:=xlEqual, Formula1:="AF,AS,CS,ET,FT,GP,JL,LD,MK,DS,TE,IP"
         .ErrorTitle = "MO Initials"
         .ErrorMessage = "Please enter valid MO Initials"
         .InputTitle = " "
@@ -27,40 +27,34 @@ Sub Process_MO_Workplan()
     End With
 
     ' WP variables
-    Dim wOrgStart(), wBriefDate() As Date
-	Dim wDeskStart(), wFieldTravelS(), wFieldWorkS(), wFieldWorkE(), wFieldTravelE() As Date
-	Dim wDraftsDue(), wDraftsReal(), wQCDue(), wQCReal(), wDebrief() As Date
-	Dim wDraftReport(), wDraftReportReal(), wDeadlineECDraftComments(), wFinalPlanned() As Date
-	Dim wFinalReal(), wDeadlineECComments() As Date
+    Dim wpData As Dictionary
+    Set wpData = New Dictionary
 
-	Dim wFieldPhase(), wNoReport(), wNoMQ() As Integer
+    Dim wpVariableNames As Variant
+    wpVariableNames = Array("wOrgStart", "wBriefDate", "wDeskStart", "wFieldTravelS", "wFieldWorkS", "wFieldWorkE", "wFieldTravelE", _
+                            "wDraftsDue", "wDraftsReal", "wQCDue", "wQCReal", "wDebrief", "wDraftReport", "wDraftReportReal", "wDeadlineECDraftComments", "wFinalPlanned", _
+                            "wFinalReal", "wDeadlineECComments", "wFieldPhase", "wNoReport", "wNoMQ", "wStatusROM", "wIntTitle", "wType", "wEntity", "wOM", "wImplement", "wImplementType", _
+                            "wProjectKE", "wCoreTeam", "wBriefExp", "wOrgStatus", "wNameExp", "wTypeExp", "wOutStatus", "wNameQC", "wTypeQC", "wDebriefExp", "wMonComment", "wQCComment", _
+                            "wMissionID", "wContractNo", "wMO", "wCountry", "wStrand", "wDSExpert", "wDelivered", "IW_Start", "IW_Sec", "IW_SecT", "LResult")
 
-	Dim wStatusROM(), wIntTitle(), wType(), wEntity() As String
-	Dim wOM(), wImplement(), wImplementType(), wProjectKE() As String
-	Dim wCoreTeam(), wBriefExp(), wOrgStatus() As String
-	Dim wNameExp(), wTypeExp(), wOutStatus(), wNameQC(), wTypeQC() As String
-	Dim wDebriefExp(), wMonComment(), wQCComment() As String
-	Dim wMissionID(), wContractNo(), wMO(), wCountry() As String
-	Dim wStrand(), wDSExpert() As String
-	Dim wDelivered() As Variant
+    Dim i As Long
+    For i = LBound(wpVariableNames) To UBound(wpVariableNames)
+        wpData(wpVariableNames(i)) = Empty
+    Next i
 
-	Dim IW_Start() As Double
-	Dim IW_Sec(), IW_SecT() As Long
-	Dim LResult() As Date
+    ' The rest of the code
+    With Application
+        .ScreenUpdating = False
+        .Calculation = xlCalculationManual
+    End With
 
-	With Application
-		.ScreenUpdating = False
-		.Calculation = xlCalculationManual
-	End With
-
-	' Set the start time of the macro
-	Dim defaultTime As Date
-	defaultTime = TimeValue("00:00:00")
+    ' Set the start time of the macro
+    Dim defaultTime As Date
+    defaultTime = TimeValue("00:00:00")
 
 	Dim dateVariables As Object
 	Set dateVariables = CreateObject("Scripting.Dictionary")
 
-	
 	dateVariables.Add "wOrgStart", defaultTime
 	dateVariables.Add "wBriefDate", defaultTime
 	dateVariables.Add "wDeskStart", defaultTime
@@ -79,21 +73,27 @@ Sub Process_MO_Workplan()
 	dateVariables.Add "wFinalPlanned", defaultTime
 	dateVariables.Add "wFinalReal", defaultTime
 	dateVariables.Add "wDeadlineECComments", defaultTime
-	dateVariables.Add "wQCDue", defaultTime
 	mDateUpdated = TimeValue("00:00:00")
 
+    ' MO variables
+    Dim moVariables() As String
+    moVariables = Array("mMissionID", "mContractNo", "mMO", "mCountry", "mOM", "mImplement", "mDelivered", "mOrgStart", _
+                    "mBriefExp", "mBriefDate", "mOrgStatus", "mOutStatus", "mDraftsReal", "mQCReal", "mDebrief", _
+                    "mDebriefExp", "mDraftReportReal", "mFinalReal", "mDeskStart", "mDateUpdated", "mFinalPlanned", _
+                    "mFinalDelivered", "mDelivered")
 
+    Dim moData As Dictionary
+    Set moData = New Dictionary
+
+    Dim variableName As Variant
+    For Each variableName In moVariables
+        ' Use the GetValue function to retrieve the value of the variable
+        moData(variableName) = GetValue(variableName)
+    Next variableName
 
     With Application
         .ScreenUpdating = False
         .Calculation = xlCalculationManual
-    End With
-
-    ' Perform the required operations here...
-
-    With Application
-        .ScreenUpdating = True
-        .Calculation = xlCalculationAutomatic
     End With
 
 End Sub
@@ -130,11 +130,6 @@ Sub MO()
     MO_initials(11) = "IP"
     MO_initials(12) = "DS"
 
-    With Application
-        .ScreenUpdating = False
-        .Calculation = xlCalculationManual
-    End With
-
     ' Read Workplan data
     Call ReadWorkplan(wData, kst, LRWorkplan)
 
@@ -151,13 +146,6 @@ Sub MO()
     ' Write Workplan data to the worksheet
     Call WriteWorkplan(wData, kst)
 
-    With Application
-        .ScreenUpdating = True
-        .Calculation = xlCalculationAutomatic
-    End With
-
-    MsgBox "The Workplan PP is updated."
-
 End Sub
 
 ' Read Workplan data
@@ -170,7 +158,7 @@ Public Sub ReadWorkplan(ByRef wData As Dictionary, ByRef kst As Long, ByRef LRWo
     MyFile = ThisWorkbook.Name
     Application.ScreenUpdating = False
 
-    LRWorkplan = Worksheets("Workplan").Cells.SpecialCells(xlCellTypeLastCell).Row
+    LRWorkplan = ThisWorkbook.Worksheets(1).Cells.SpecialCells(xlCellTypeLastCell).Row
 
     ' Read workplan into dictionary
     kst = 0
@@ -210,6 +198,57 @@ Public Sub ReadWorkplan(ByRef wData As Dictionary, ByRef kst As Long, ByRef LRWo
 
     Application.ScreenUpdating = True
 
+End Sub
+
+' Match keys to cell content in MO file
+Function MatchKeysInFileContent(fileContent As String, keys As Range) As Collection
+    Dim key As Range
+    Dim foundMatches As Collection
+    Set foundMatches = New Collection
+    
+    For Each key In keys
+        If InStr(fileContent, key.Value) > 0 Then
+            foundMatches.Add key.Value
+        End If
+    Next key
+    
+    Set MatchKeysInFileContent = foundMatches
+End Function
+
+' Open the MO file and read the data into the dictionary
+Sub OpenAllMOFiles(Optional directory As String = "read_mo")
+    Dim filePath As String
+    Dim fileContent As String
+    Dim openedFiles As Collection
+    Dim keys As Range
+    Set openedFiles = New Collection
+    
+    ' Set the range containing the keys to match
+    Set keys = ThisWorkbook.Worksheets("Sheet1").Range("A1:A10")
+    
+    ChDir ThisWorkbook.Path & Application.PathSeparator & directory
+    filePath = Dir("MO_*.xlsm")
+    
+    Do While filePath <> ""
+        fileContent = ReadFileContent(filePath)
+        openedFiles.Add Array(filePath, fileContent)
+        filePath = Dir
+    Loop
+    
+    ' Iterate through the openedFiles collection and perform key matching
+    Dim item As Variant
+    Dim matchedKeys As Collection
+    For Each item In openedFiles
+        Set matchedKeys = MatchKeysInFileContent(item(1), keys)
+        
+        Debug.Print "File: " & item(0)
+        Debug.Print "Matched keys: "
+        Dim matchedKey As Variant
+        For Each matchedKey In matchedKeys
+            Debug.Print " - " & matchedKey
+        Next matchedKey
+        Debug.Print String(40, "-")
+    Next item
 End Sub
 
 ' Read MO data
@@ -262,12 +301,93 @@ End Sub
 
 ' Update Workplan with MO data
 Sub UpdateWorkplan(wData As Dictionary, mData As Dictionary, kst As Long)
-    
+
+    Dim key As Variant
+    Dim tempData As Dictionary
+
+    ' Reference the Workplan worksheet and the MO worksheet
+    Dim workplanWs As Worksheet
+    Dim moWs As Worksheet
+    Set workplanWs = ThisWorkbook.Worksheets("Workplan")
+    Set moWs = Workbooks("MO_File.xlsx").Worksheets(1)
+
+    ' Find the header row
+    Dim headerRow As Long
+    headerRow = 1
+
+    ' Loop through each key in wData dictionary
+    For Each key In wData.Keys
+
+        ' Find the corresponding column index in the Workplan and MO worksheets
+        Dim wpCol As Long, moCol As Long
+        wpCol = Application.Match(key, workplanWs.Rows(headerRow), 0)
+        moCol = Application.Match(key, moWs.Rows(headerRow), 0)
+
+        ' If the column is found in both the Workplan and MO worksheets
+        If Not IsError(wpCol) And Not IsError(moCol) Then
+
+            ' Loop through the rows of the MO worksheet and update the Workplan data
+            Dim lastRow As Long
+            lastRow = moWs.Cells(moWs.Rows.Count, moCol).End(xlUp).Row
+
+            Dim r As Long
+            For r = headerRow + 1 To lastRow
+                workplanWs.Cells(r, wpCol).Value = moWs.Cells(r, moCol).Value
+            Next r
+
+        End If
+
+    Next key
+
 End Sub
 
 ' Workplan data to the worksheet
 Sub WriteWorkplan(wData As Dictionary, kst As Long)
-    
+
+    Dim key As Variant
+    Dim tempData As Dictionary
+    Dim filePath As String
+    Dim fileNo As Integer
+
+    ' Define the output file path
+    filePath = "Workplan_Output.txt"
+    fileNo = FreeFile
+
+    ' Create or overwrite the file
+    Open filePath For Output As fileNo
+
+    ' Write header line
+    Print #fileNo, "Task ID" & vbTab & "Duration (Adjusted)" & vbTab & "Cost (Adjusted)"
+
+    ' Iterate through each key in wData dictionary
+    For Each key In wData.Keys
+
+        ' Get the values from the wData dictionary
+        Set tempData = wData(key)
+        Dim adjustedDuration As Double
+        Dim adjustedCost As Double
+
+        adjustedDuration = tempData("duration") * kst
+        adjustedCost = tempData("cost") * kst
+
+        ' Write the task ID, adjusted duration, and adjusted cost to the file
+        Print #fileNo, key & vbTab & Format(adjustedDuration, "0.00") & vbTab & Format(adjustedCost, "0.00")
+
+    Next key
+
+    ' Close the file
+    Close fileNo
+
+    ' Inform the user that the file has been written
+    MsgBox "Workplan output has been written to: " & filePath, vbInformation, "Export Complete"
+
+    With Application
+        .ScreenUpdating = True
+        .Calculation = xlCalculationAutomatic
+    End With
+
+    MsgBox "The Workplan PP is updated."
+
 End Sub
 
 ' Count the occurrences of a specific MO
